@@ -1,0 +1,890 @@
+openapi: 3.0.3
+info:
+  title: Sistema de Compra Programada de Ações - Itaú Corretora
+  description: API REST para o sistema de compra programada de ações
+  version: 1.0.0
+  contact:
+    name: Itaú Corretora
+
+servers:
+  - url: http://localhost:8080
+    description: Servidor local
+
+tags:
+  - name: Clientes
+    description: Endpoints relacionados aos clientes
+  - name: Administrativo
+    description: Endpoints administrativos e gestão de cestas
+  - name: Conta Master
+    description: Consulta da conta master
+  - name: Motor de Compra
+    description: Execução e consulta do motor de compra
+
+paths:
+  /api/clientes/adesao:
+    post:
+      tags:
+        - Clientes
+      summary: Aderir ao produto
+      description: Permite que um cliente faça adesão ao produto de compra programada
+      operationId: aderirProduto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdesaoRequest'
+            examples:
+              exemplo1:
+                value:
+                  nome: "Joao da Silva"
+                  cpf: "12345678901"
+                  email: "joao.silva@email.com"
+                  valorMensal: 3000.00
+      responses:
+        '201':
+          description: Adesão realizada com sucesso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+              description: UUID gerado por requisição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdesaoResponse'
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                cpfDuplicado:
+                  value:
+                    erro: "CPF ja cadastrado no sistema."
+                    codigo: "CLIENTE_CPF_DUPLICADO"
+                valorInvalido:
+                  value:
+                    erro: "O valor mensal minimo e de R$ 100,00."
+                    codigo: "VALOR_MENSAL_INVALIDO"
+
+  /api/clientes/{clienteId}/saida:
+    post:
+      tags:
+        - Clientes
+      summary: Sair do produto
+      description: Permite que um cliente saia do produto de compra programada
+      operationId: sairProduto
+      parameters:
+        - name: clienteId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Saída realizada com sucesso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaidaResponse'
+        '404':
+          description: Cliente não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                clienteNaoEncontrado:
+                  value:
+                    erro: "Cliente nao encontrado."
+                    codigo: "CLIENTE_NAO_ENCONTRADO"
+
+  /api/clientes/{clienteId}/valor-mensal:
+    put:
+      tags:
+        - Clientes
+      summary: Alterar valor mensal
+      description: Altera o valor mensal de aporte do cliente
+      operationId: alterarValorMensal
+      parameters:
+        - name: clienteId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlterarValorMensalRequest'
+            examples:
+              exemplo1:
+                value:
+                  novoValorMensal: 6000.00
+      responses:
+        '200':
+          description: Valor mensal alterado com sucesso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlterarValorMensalResponse'
+
+  /api/clientes/{clienteId}/carteira:
+    get:
+      tags:
+        - Clientes
+      summary: Consultar carteira (custódia)
+      description: Retorna a carteira de ativos do cliente em custódia
+      operationId: consultarCarteira
+      parameters:
+        - name: clienteId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Carteira consultada com sucesso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarteiraResponse'
+
+  /api/clientes/{clienteId}/rentabilidade:
+    get:
+      tags:
+        - Clientes
+      summary: Consultar rentabilidade detalhada
+      description: Retorna a rentabilidade detalhada do cliente
+      operationId: consultarRentabilidade
+      parameters:
+        - name: clienteId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Rentabilidade consultada com sucesso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentabilidadeResponse'
+
+  /api/admin/cesta:
+    post:
+      tags:
+        - Administrativo
+      summary: Cadastrar/Alterar cesta Top Five
+      description: Cadastra uma nova cesta ou altera a cesta ativa
+      operationId: cadastrarCesta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CestaRequest'
+            examples:
+              exemplo1:
+                value:
+                  nome: "Top Five - Fevereiro 2026"
+                  itens:
+                    - ticker: "PETR4"
+                      percentual: 30.00
+                    - ticker: "VALE3"
+                      percentual: 25.00
+                    - ticker: "ITUB4"
+                      percentual: 20.00
+                    - ticker: "BBDC4"
+                      percentual: 15.00
+                    - ticker: "WEGE3"
+                      percentual: 10.00
+      responses:
+        '201':
+          description: Cesta cadastrada com sucesso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/CestaResponseSimples'
+                  - $ref: '#/components/schemas/CestaResponseComRebalanceamento'
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                percentuaisInvalidos:
+                  value:
+                    erro: "A soma dos percentuais deve ser exatamente 100%. Soma atual: 95%."
+                    codigo: "PERCENTUAIS_INVALIDOS"
+                quantidadeInvalida:
+                  value:
+                    erro: "A cesta deve conter exatamente 5 ativos. Quantidade informada: 4."
+                    codigo: "QUANTIDADE_ATIVOS_INVALIDA"
+
+  /api/admin/cesta/atual:
+    get:
+      tags:
+        - Administrativo
+      summary: Consultar cesta atual
+      description: Retorna a cesta ativa no momento
+      operationId: consultarCestaAtual
+      responses:
+        '200':
+          description: Cesta atual consultada com sucesso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CestaAtualResponse'
+
+  /api/admin/cesta/historico:
+    get:
+      tags:
+        - Administrativo
+      summary: Histórico de cestas
+      description: Retorna o histórico de todas as cestas cadastradas
+      operationId: consultarHistoricoCestas
+      responses:
+        '200':
+          description: Histórico de cestas consultado com sucesso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricoCestasResponse'
+
+  /api/admin/conta-master/custodia:
+    get:
+      tags:
+        - Conta Master
+      summary: Consultar custódia master
+      description: Retorna a custódia da conta master
+      operationId: consultarCustodiaMaster
+      responses:
+        '200':
+          description: Custódia master consultada com sucesso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustodiaMasterResponse'
+
+  /api/motor/executar-compra:
+    post:
+      tags:
+        - Motor de Compra
+      summary: Executar compra manualmente
+      description: Executa o motor de compra manualmente para uma data específica (para testes)
+      operationId: executarCompra
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutarCompraRequest'
+            examples:
+              exemplo1:
+                value:
+                  dataReferencia: "2026-02-05"
+      responses:
+        '200':
+          description: Compra executada com sucesso
+          headers:
+            X-Request-Id:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutarCompraResponse'
+        '404':
+          description: Cotação não encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Compra já executada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    AdesaoRequest:
+      type: object
+      required:
+        - nome
+        - cpf
+        - email
+        - valorMensal
+      properties:
+        nome:
+          type: string
+          example: "Joao da Silva"
+        cpf:
+          type: string
+          pattern: '^\d{11}$'
+          example: "12345678901"
+        email:
+          type: string
+          format: email
+          example: "joao.silva@email.com"
+        valorMensal:
+          type: number
+          format: double
+          minimum: 100.00
+          example: 3000.00
+
+    AdesaoResponse:
+      type: object
+      properties:
+        clienteId:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        cpf:
+          type: string
+        email:
+          type: string
+        valorMensal:
+          type: number
+          format: double
+        ativo:
+          type: boolean
+        dataAdesao:
+          type: string
+          format: date-time
+        contaGrafica:
+          $ref: '#/components/schemas/ContaGrafica'
+
+    ContaGrafica:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        numeroConta:
+          type: string
+        tipo:
+          type: string
+          enum: [FILHOTE, MASTER]
+        dataCriacao:
+          type: string
+          format: date-time
+
+    SaidaResponse:
+      type: object
+      properties:
+        clienteId:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        ativo:
+          type: boolean
+        dataSaida:
+          type: string
+          format: date-time
+        mensagem:
+          type: string
+
+    AlterarValorMensalRequest:
+      type: object
+      required:
+        - novoValorMensal
+      properties:
+        novoValorMensal:
+          type: number
+          format: double
+          minimum: 100.00
+
+    AlterarValorMensalResponse:
+      type: object
+      properties:
+        clienteId:
+          type: integer
+          format: int64
+        valorMensalAnterior:
+          type: number
+          format: double
+        valorMensalNovo:
+          type: number
+          format: double
+        dataAlteracao:
+          type: string
+          format: date-time
+        mensagem:
+          type: string
+
+    CarteiraResponse:
+      type: object
+      properties:
+        clienteId:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        contaGrafica:
+          type: string
+        dataConsulta:
+          type: string
+          format: date-time
+        resumo:
+          $ref: '#/components/schemas/ResumoCarteira'
+        ativos:
+          type: array
+          items:
+            $ref: '#/components/schemas/AtivoCarteira'
+
+    ResumoCarteira:
+      type: object
+      properties:
+        valorTotalInvestido:
+          type: number
+          format: double
+        valorAtualCarteira:
+          type: number
+          format: double
+        plTotal:
+          type: number
+          format: double
+        rentabilidadePercentual:
+          type: number
+          format: double
+
+    AtivoCarteira:
+      type: object
+      properties:
+        ticker:
+          type: string
+        quantidade:
+          type: integer
+        precoMedio:
+          type: number
+          format: double
+        cotacaoAtual:
+          type: number
+          format: double
+        valorAtual:
+          type: number
+          format: double
+        pl:
+          type: number
+          format: double
+        plPercentual:
+          type: number
+          format: double
+        composicaoCarteira:
+          type: number
+          format: double
+
+    RentabilidadeResponse:
+      type: object
+      properties:
+        clienteId:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        dataConsulta:
+          type: string
+          format: date-time
+        rentabilidade:
+          $ref: '#/components/schemas/ResumoCarteira'
+        historicoAportes:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoricoAporte'
+        evolucaoCarteira:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvolucaoCarteira'
+
+    HistoricoAporte:
+      type: object
+      properties:
+        data:
+          type: string
+          format: date
+        valor:
+          type: number
+          format: double
+        parcela:
+          type: string
+
+    EvolucaoCarteira:
+      type: object
+      properties:
+        data:
+          type: string
+          format: date
+        valorCarteira:
+          type: number
+          format: double
+        valorInvestido:
+          type: number
+          format: double
+        rentabilidade:
+          type: number
+          format: double
+
+    CestaRequest:
+      type: object
+      required:
+        - nome
+        - itens
+      properties:
+        nome:
+          type: string
+        itens:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/ItemCesta'
+
+    ItemCesta:
+      type: object
+      required:
+        - ticker
+        - percentual
+      properties:
+        ticker:
+          type: string
+        percentual:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 100
+
+    CestaResponseSimples:
+      type: object
+      properties:
+        cestaId:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        ativa:
+          type: boolean
+        dataCriacao:
+          type: string
+          format: date-time
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemCesta'
+        rebalanceamentoDisparado:
+          type: boolean
+        mensagem:
+          type: string
+
+    CestaResponseComRebalanceamento:
+      type: object
+      properties:
+        cestaId:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        ativa:
+          type: boolean
+        dataCriacao:
+          type: string
+          format: date-time
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemCesta'
+        cestaAnteriorDesativada:
+          $ref: '#/components/schemas/CestaAnteriorDesativada'
+        rebalanceamentoDisparado:
+          type: boolean
+        ativosRemovidos:
+          type: array
+          items:
+            type: string
+        ativosAdicionados:
+          type: array
+          items:
+            type: string
+        mensagem:
+          type: string
+
+    CestaAnteriorDesativada:
+      type: object
+      properties:
+        cestaId:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        dataDesativacao:
+          type: string
+          format: date-time
+
+    CestaAtualResponse:
+      type: object
+      properties:
+        cestaId:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        ativa:
+          type: boolean
+        dataCriacao:
+          type: string
+          format: date-time
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemCestaComCotacao'
+
+    ItemCestaComCotacao:
+      type: object
+      properties:
+        ticker:
+          type: string
+        percentual:
+          type: number
+          format: double
+        cotacaoAtual:
+          type: number
+          format: double
+
+    HistoricoCestasResponse:
+      type: object
+      properties:
+        cestas:
+          type: array
+          items:
+            $ref: '#/components/schemas/CestaHistorico'
+
+    CestaHistorico:
+      type: object
+      properties:
+        cestaId:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        ativa:
+          type: boolean
+        dataCriacao:
+          type: string
+          format: date-time
+        dataDesativacao:
+          type: string
+          format: date-time
+          nullable: true
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemCesta'
+
+    CustodiaMasterResponse:
+      type: object
+      properties:
+        contaMaster:
+          $ref: '#/components/schemas/ContaMasterInfo'
+        custodia:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustodiaMasterItem'
+        valorTotalResiduo:
+          type: number
+          format: double
+
+    ContaMasterInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        numeroConta:
+          type: string
+        tipo:
+          type: string
+          enum: [MASTER]
+
+    CustodiaMasterItem:
+      type: object
+      properties:
+        ticker:
+          type: string
+        quantidade:
+          type: integer
+        precoMedio:
+          type: number
+          format: double
+        valorAtual:
+          type: number
+          format: double
+        origem:
+          type: string
+
+    ExecutarCompraRequest:
+      type: object
+      required:
+        - dataReferencia
+      properties:
+        dataReferencia:
+          type: string
+          format: date
+
+    ExecutarCompraResponse:
+      type: object
+      properties:
+        dataExecucao:
+          type: string
+          format: date-time
+        totalClientes:
+          type: integer
+        totalConsolidado:
+          type: number
+          format: double
+        ordensCompra:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrdemCompra'
+        distribuicoes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DistribuicaoCliente'
+        residuosCustMaster:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResiduoMaster'
+        eventosIRPublicados:
+          type: integer
+        mensagem:
+          type: string
+
+    OrdemCompra:
+      type: object
+      properties:
+        ticker:
+          type: string
+        quantidadeTotal:
+          type: integer
+        detalhes:
+          type: array
+          items:
+            $ref: '#/components/schemas/DetalheOrdemCompra'
+        precoUnitario:
+          type: number
+          format: double
+        valorTotal:
+          type: number
+          format: double
+
+    DetalheOrdemCompra:
+      type: object
+      properties:
+        tipo:
+          type: string
+          enum: [FRACIONARIO, INTEIRO]
+        ticker:
+          type: string
+        quantidade:
+          type: integer
+
+    DistribuicaoCliente:
+      type: object
+      properties:
+        clienteId:
+          type: integer
+          format: int64
+        nome:
+          type: string
+        valorAporte:
+          type: number
+          format: double
+        ativos:
+          type: array
+          items:
+            $ref: '#/components/schemas/AtivoDistribuido'
+
+    AtivoDistribuido:
+      type: object
+      properties:
+        ticker:
+          type: string
+        quantidade:
+          type: integer
+
+    ResiduoMaster:
+      type: object
+      properties:
+        ticker:
+          type: string
+        quantidade:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      properties:
+        erro:
+          type: string
+        codigo:
+          type: string
+          enum:
+            - CLIENTE_CPF_DUPLICADO
+            - VALOR_MENSAL_INVALIDO
+            - PERCENTUAIS_INVALIDOS
+            - QUANTIDADE_ATIVOS_INVALIDA
+            - CLIENTE_JA_INATIVO
+            - CLIENTE_NAO_ENCONTRADO
+            - CESTA_NAO_ENCONTRADA
+            - COTACAO_NAO_ENCONTRADA
+            - COMPRA_JA_EXECUTADA
+            - KAFKA_INDISPONIVEL

@@ -1,0 +1,1188 @@
+openapi: 3.0.3
+info:
+  contact:
+    name: Itaú Corretora
+  description: API REST para o sistema de compra programada de ações
+  title: Sistema de Compra Programada de Ações - Itaú Corretora
+  version: 1.0.0
+servers:
+- description: Servidor local
+  url: http://localhost:8080
+tags:
+- description: Endpoints relacionados aos clientes
+  name: Clientes
+- description: Endpoints administrativos e gestão de cestas
+  name: Administrativo
+- description: Consulta da conta master
+  name: Conta Master
+- description: Execução e consulta do motor de compra
+  name: Motor de Compra
+paths:
+  /api/clientes/adesao:
+    post:
+      description: Permite que um cliente faça adesão ao produto de compra programada
+      operationId: aderirProduto
+      requestBody:
+        content:
+          application/json:
+            examples:
+              exemplo1:
+                value:
+                  nome: Joao da Silva
+                  cpf: "12345678901"
+                  email: joao.silva@email.com
+                  valorMensal: 3000.0
+            schema:
+              $ref: '#/components/schemas/AdesaoRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdesaoResponse'
+          description: Adesão realizada com sucesso
+          headers:
+            X-Request-Id:
+              description: UUID gerado por requisição
+              explode: false
+              schema:
+                type: string
+              style: simple
+        "400":
+          content:
+            application/json:
+              examples:
+                cpfDuplicado:
+                  value:
+                    erro: CPF ja cadastrado no sistema.
+                    codigo: CLIENTE_CPF_DUPLICADO
+                valorInvalido:
+                  value:
+                    erro: "O valor mensal minimo e de R$ 100,00."
+                    codigo: VALOR_MENSAL_INVALIDO
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Requisição inválida
+      summary: Aderir ao produto
+      tags:
+      - Clientes
+  /api/clientes/{clienteId}/saida:
+    post:
+      description: Permite que um cliente saia do produto de compra programada
+      operationId: sairProduto
+      parameters:
+      - explode: false
+        in: path
+        name: clienteId
+        required: true
+        schema:
+          format: int64
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaidaResponse'
+          description: Saída realizada com sucesso
+          headers:
+            X-Request-Id:
+              explode: false
+              schema:
+                type: string
+              style: simple
+        "404":
+          content:
+            application/json:
+              examples:
+                clienteNaoEncontrado:
+                  value:
+                    erro: Cliente nao encontrado.
+                    codigo: CLIENTE_NAO_ENCONTRADO
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Cliente não encontrado
+      summary: Sair do produto
+      tags:
+      - Clientes
+  /api/clientes/{clienteId}/valor-mensal:
+    put:
+      description: Altera o valor mensal de aporte do cliente
+      operationId: alterarValorMensal
+      parameters:
+      - explode: false
+        in: path
+        name: clienteId
+        required: true
+        schema:
+          format: int64
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            examples:
+              exemplo1:
+                value:
+                  novoValorMensal: 6000.0
+            schema:
+              $ref: '#/components/schemas/AlterarValorMensalRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlterarValorMensalResponse'
+          description: Valor mensal alterado com sucesso
+          headers:
+            X-Request-Id:
+              explode: false
+              schema:
+                type: string
+              style: simple
+      summary: Alterar valor mensal
+      tags:
+      - Clientes
+  /api/clientes/{clienteId}/carteira:
+    get:
+      description: Retorna a carteira de ativos do cliente em custódia
+      operationId: consultarCarteira
+      parameters:
+      - explode: false
+        in: path
+        name: clienteId
+        required: true
+        schema:
+          format: int64
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarteiraResponse'
+          description: Carteira consultada com sucesso
+          headers:
+            X-Request-Id:
+              explode: false
+              schema:
+                type: string
+              style: simple
+      summary: Consultar carteira (custódia)
+      tags:
+      - Clientes
+  /api/clientes/{clienteId}/rentabilidade:
+    get:
+      description: Retorna a rentabilidade detalhada do cliente
+      operationId: consultarRentabilidade
+      parameters:
+      - explode: false
+        in: path
+        name: clienteId
+        required: true
+        schema:
+          format: int64
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RentabilidadeResponse'
+          description: Rentabilidade consultada com sucesso
+          headers:
+            X-Request-Id:
+              explode: false
+              schema:
+                type: string
+              style: simple
+      summary: Consultar rentabilidade detalhada
+      tags:
+      - Clientes
+  /api/admin/cesta:
+    post:
+      description: Cadastra uma nova cesta ou altera a cesta ativa
+      operationId: cadastrarCesta
+      requestBody:
+        content:
+          application/json:
+            examples:
+              exemplo1:
+                value:
+                  nome: Top Five - Fevereiro 2026
+                  itens:
+                  - ticker: PETR4
+                    percentual: 30.0
+                  - ticker: VALE3
+                    percentual: 25.0
+                  - ticker: ITUB4
+                    percentual: 20.0
+                  - ticker: BBDC4
+                    percentual: 15.0
+                  - ticker: WEGE3
+                    percentual: 10.0
+            schema:
+              $ref: '#/components/schemas/CestaRequest'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/cadastrarCesta_201_response'
+          description: Cesta cadastrada com sucesso
+          headers:
+            X-Request-Id:
+              explode: false
+              schema:
+                type: string
+              style: simple
+        "400":
+          content:
+            application/json:
+              examples:
+                percentuaisInvalidos:
+                  value:
+                    erro: "A soma dos percentuais deve ser exatamente 100%. Soma atual:\
+                      \ 95%."
+                    codigo: PERCENTUAIS_INVALIDOS
+                quantidadeInvalida:
+                  value:
+                    erro: "A cesta deve conter exatamente 5 ativos. Quantidade informada:\
+                      \ 4."
+                    codigo: QUANTIDADE_ATIVOS_INVALIDA
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Requisição inválida
+      summary: Cadastrar/Alterar cesta Top Five
+      tags:
+      - Administrativo
+  /api/admin/cesta/atual:
+    get:
+      description: Retorna a cesta ativa no momento
+      operationId: consultarCestaAtual
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CestaAtualResponse'
+          description: Cesta atual consultada com sucesso
+          headers:
+            X-Request-Id:
+              explode: false
+              schema:
+                type: string
+              style: simple
+      summary: Consultar cesta atual
+      tags:
+      - Administrativo
+  /api/admin/cesta/historico:
+    get:
+      description: Retorna o histórico de todas as cestas cadastradas
+      operationId: consultarHistoricoCestas
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoricoCestasResponse'
+          description: Histórico de cestas consultado com sucesso
+          headers:
+            X-Request-Id:
+              explode: false
+              schema:
+                type: string
+              style: simple
+      summary: Histórico de cestas
+      tags:
+      - Administrativo
+  /api/admin/conta-master/custodia:
+    get:
+      description: Retorna a custódia da conta master
+      operationId: consultarCustodiaMaster
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustodiaMasterResponse'
+          description: Custódia master consultada com sucesso
+          headers:
+            X-Request-Id:
+              explode: false
+              schema:
+                type: string
+              style: simple
+      summary: Consultar custódia master
+      tags:
+      - Conta Master
+  /api/motor/executar-compra:
+    post:
+      description: Executa o motor de compra manualmente para uma data específica
+        (para testes)
+      operationId: executarCompra
+      requestBody:
+        content:
+          application/json:
+            examples:
+              exemplo1:
+                value:
+                  dataReferencia: 2026-02-05
+            schema:
+              $ref: '#/components/schemas/ExecutarCompraRequest'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutarCompraResponse'
+          description: Compra executada com sucesso
+          headers:
+            X-Request-Id:
+              explode: false
+              schema:
+                type: string
+              style: simple
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Cotação não encontrada
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Compra já executada
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Erro interno do servidor
+      summary: Executar compra manualmente
+      tags:
+      - Motor de Compra
+components:
+  schemas:
+    AdesaoRequest:
+      example:
+        valorMensal: 3000.0
+        cpf: "12345678901"
+        nome: Joao da Silva
+        email: joao.silva@email.com
+      properties:
+        nome:
+          example: Joao da Silva
+          type: string
+        cpf:
+          example: "12345678901"
+          pattern: "^\\d{11}$"
+          type: string
+        email:
+          example: joao.silva@email.com
+          format: email
+          type: string
+        valorMensal:
+          example: 3000.0
+          format: double
+          minimum: 100.0
+          type: number
+      required:
+      - cpf
+      - email
+      - nome
+      - valorMensal
+      type: object
+    AdesaoResponse:
+      example:
+        contaGrafica:
+          tipo: FILHOTE
+          numeroConta: numeroConta
+          id: 1
+          dataCriacao: 2000-01-23T04:56:07.000+00:00
+        valorMensal: 6.027456183070403
+        ativo: true
+        clienteId: 0
+        dataAdesao: 2000-01-23T04:56:07.000+00:00
+        cpf: cpf
+        nome: nome
+        email: email
+      properties:
+        clienteId:
+          format: int64
+          type: integer
+        nome:
+          type: string
+        cpf:
+          type: string
+        email:
+          type: string
+        valorMensal:
+          format: double
+          type: number
+        ativo:
+          type: boolean
+        dataAdesao:
+          format: date-time
+          type: string
+        contaGrafica:
+          $ref: '#/components/schemas/ContaGrafica'
+      type: object
+    ContaGrafica:
+      example:
+        tipo: FILHOTE
+        numeroConta: numeroConta
+        id: 1
+        dataCriacao: 2000-01-23T04:56:07.000+00:00
+      properties:
+        id:
+          format: int64
+          type: integer
+        numeroConta:
+          type: string
+        tipo:
+          enum:
+          - FILHOTE
+          - MASTER
+          type: string
+        dataCriacao:
+          format: date-time
+          type: string
+      type: object
+    SaidaResponse:
+      example:
+        ativo: true
+        clienteId: 0
+        mensagem: mensagem
+        nome: nome
+        dataSaida: 2000-01-23T04:56:07.000+00:00
+      properties:
+        clienteId:
+          format: int64
+          type: integer
+        nome:
+          type: string
+        ativo:
+          type: boolean
+        dataSaida:
+          format: date-time
+          type: string
+        mensagem:
+          type: string
+      type: object
+    AlterarValorMensalRequest:
+      example:
+        novoValorMensal: 100.0800828190461
+      properties:
+        novoValorMensal:
+          format: double
+          minimum: 100.0
+          type: number
+      required:
+      - novoValorMensal
+      type: object
+    AlterarValorMensalResponse:
+      example:
+        clienteId: 0
+        valorMensalNovo: 1.4658129805029452
+        mensagem: mensagem
+        valorMensalAnterior: 6.027456183070403
+        dataAlteracao: 2000-01-23T04:56:07.000+00:00
+      properties:
+        clienteId:
+          format: int64
+          type: integer
+        valorMensalAnterior:
+          format: double
+          type: number
+        valorMensalNovo:
+          format: double
+          type: number
+        dataAlteracao:
+          format: date-time
+          type: string
+        mensagem:
+          type: string
+      type: object
+    CarteiraResponse:
+      example:
+        contaGrafica: contaGrafica
+        clienteId: 0
+        nome: nome
+        resumo:
+          valorTotalInvestido: 6.027456183070403
+          valorAtualCarteira: 1.4658129805029452
+          plTotal: 5.962133916683182
+          rentabilidadePercentual: 5.637376656633329
+        dataConsulta: 2000-01-23T04:56:07.000+00:00
+        ativos:
+        - ticker: ticker
+          precoMedio: 7.061401241503109
+          cotacaoAtual: 9.301444243932576
+          valorAtual: 3.616076749251911
+          plPercentual: 4.145608029883936
+          composicaoCarteira: 7.386281948385884
+          pl: 2.027123023002322
+          quantidade: 2
+        - ticker: ticker
+          precoMedio: 7.061401241503109
+          cotacaoAtual: 9.301444243932576
+          valorAtual: 3.616076749251911
+          plPercentual: 4.145608029883936
+          composicaoCarteira: 7.386281948385884
+          pl: 2.027123023002322
+          quantidade: 2
+      properties:
+        clienteId:
+          format: int64
+          type: integer
+        nome:
+          type: string
+        contaGrafica:
+          type: string
+        dataConsulta:
+          format: date-time
+          type: string
+        resumo:
+          $ref: '#/components/schemas/ResumoCarteira'
+        ativos:
+          items:
+            $ref: '#/components/schemas/AtivoCarteira'
+          type: array
+      type: object
+    ResumoCarteira:
+      example:
+        valorTotalInvestido: 6.027456183070403
+        valorAtualCarteira: 1.4658129805029452
+        plTotal: 5.962133916683182
+        rentabilidadePercentual: 5.637376656633329
+      properties:
+        valorTotalInvestido:
+          format: double
+          type: number
+        valorAtualCarteira:
+          format: double
+          type: number
+        plTotal:
+          format: double
+          type: number
+        rentabilidadePercentual:
+          format: double
+          type: number
+      type: object
+    AtivoCarteira:
+      example:
+        ticker: ticker
+        precoMedio: 7.061401241503109
+        cotacaoAtual: 9.301444243932576
+        valorAtual: 3.616076749251911
+        plPercentual: 4.145608029883936
+        composicaoCarteira: 7.386281948385884
+        pl: 2.027123023002322
+        quantidade: 2
+      properties:
+        ticker:
+          type: string
+        quantidade:
+          type: integer
+        precoMedio:
+          format: double
+          type: number
+        cotacaoAtual:
+          format: double
+          type: number
+        valorAtual:
+          format: double
+          type: number
+        pl:
+          format: double
+          type: number
+        plPercentual:
+          format: double
+          type: number
+        composicaoCarteira:
+          format: double
+          type: number
+      type: object
+    RentabilidadeResponse:
+      example:
+        clienteId: 0
+        evolucaoCarteira:
+        - valorCarteira: 1.4658129805029452
+          valorInvestido: 5.962133916683182
+          data: 2000-01-23
+          rentabilidade: 5.637376656633329
+        - valorCarteira: 1.4658129805029452
+          valorInvestido: 5.962133916683182
+          data: 2000-01-23
+          rentabilidade: 5.637376656633329
+        rentabilidade:
+          valorTotalInvestido: 6.027456183070403
+          valorAtualCarteira: 1.4658129805029452
+          plTotal: 5.962133916683182
+          rentabilidadePercentual: 5.637376656633329
+        nome: nome
+        dataConsulta: 2000-01-23T04:56:07.000+00:00
+        historicoAportes:
+        - data: 2000-01-23
+          valor: 6.027456183070403
+          parcela: parcela
+        - data: 2000-01-23
+          valor: 6.027456183070403
+          parcela: parcela
+      properties:
+        clienteId:
+          format: int64
+          type: integer
+        nome:
+          type: string
+        dataConsulta:
+          format: date-time
+          type: string
+        rentabilidade:
+          $ref: '#/components/schemas/ResumoCarteira'
+        historicoAportes:
+          items:
+            $ref: '#/components/schemas/HistoricoAporte'
+          type: array
+        evolucaoCarteira:
+          items:
+            $ref: '#/components/schemas/EvolucaoCarteira'
+          type: array
+      type: object
+    HistoricoAporte:
+      example:
+        data: 2000-01-23
+        valor: 6.027456183070403
+        parcela: parcela
+      properties:
+        data:
+          format: date
+          type: string
+        valor:
+          format: double
+          type: number
+        parcela:
+          type: string
+      type: object
+    EvolucaoCarteira:
+      example:
+        valorCarteira: 1.4658129805029452
+        valorInvestido: 5.962133916683182
+        data: 2000-01-23
+        rentabilidade: 5.637376656633329
+      properties:
+        data:
+          format: date
+          type: string
+        valorCarteira:
+          format: double
+          type: number
+        valorInvestido:
+          format: double
+          type: number
+        rentabilidade:
+          format: double
+          type: number
+      type: object
+    CestaRequest:
+      example:
+        itens:
+        - ticker: ticker
+          percentual: 60.27456183070403
+        - ticker: ticker
+          percentual: 60.27456183070403
+        - ticker: ticker
+          percentual: 60.27456183070403
+        - ticker: ticker
+          percentual: 60.27456183070403
+        - ticker: ticker
+          percentual: 60.27456183070403
+        nome: nome
+      properties:
+        nome:
+          type: string
+        itens:
+          items:
+            $ref: '#/components/schemas/ItemCesta'
+          maxItems: 5
+          minItems: 5
+          type: array
+      required:
+      - itens
+      - nome
+      type: object
+    ItemCesta:
+      example:
+        ticker: ticker
+        percentual: 60.27456183070403
+      properties:
+        ticker:
+          type: string
+        percentual:
+          format: double
+          maximum: 100
+          minimum: 0
+          type: number
+      required:
+      - percentual
+      - ticker
+      type: object
+    CestaResponseSimples:
+      example:
+        itens:
+        - ticker: ticker
+          percentual: 60.27456183070403
+        - ticker: ticker
+          percentual: 60.27456183070403
+        cestaId: 0
+        mensagem: mensagem
+        nome: nome
+        ativa: true
+        dataCriacao: 2000-01-23T04:56:07.000+00:00
+        rebalanceamentoDisparado: true
+      properties:
+        cestaId:
+          format: int64
+          type: integer
+        nome:
+          type: string
+        ativa:
+          type: boolean
+        dataCriacao:
+          format: date-time
+          type: string
+        itens:
+          items:
+            $ref: '#/components/schemas/ItemCesta'
+          type: array
+        rebalanceamentoDisparado:
+          type: boolean
+        mensagem:
+          type: string
+      type: object
+    CestaResponseComRebalanceamento:
+      properties:
+        cestaId:
+          format: int64
+          type: integer
+        nome:
+          type: string
+        ativa:
+          type: boolean
+        dataCriacao:
+          format: date-time
+          type: string
+        itens:
+          items:
+            $ref: '#/components/schemas/ItemCesta'
+          type: array
+        cestaAnteriorDesativada:
+          $ref: '#/components/schemas/CestaAnteriorDesativada'
+        rebalanceamentoDisparado:
+          type: boolean
+        ativosRemovidos:
+          items:
+            type: string
+          type: array
+        ativosAdicionados:
+          items:
+            type: string
+          type: array
+        mensagem:
+          type: string
+      type: object
+    CestaAnteriorDesativada:
+      properties:
+        cestaId:
+          format: int64
+          type: integer
+        nome:
+          type: string
+        dataDesativacao:
+          format: date-time
+          type: string
+      type: object
+    CestaAtualResponse:
+      example:
+        itens:
+        - ticker: ticker
+          cotacaoAtual: 1.4658129805029452
+          percentual: 6.027456183070403
+        - ticker: ticker
+          cotacaoAtual: 1.4658129805029452
+          percentual: 6.027456183070403
+        cestaId: 0
+        nome: nome
+        ativa: true
+        dataCriacao: 2000-01-23T04:56:07.000+00:00
+      properties:
+        cestaId:
+          format: int64
+          type: integer
+        nome:
+          type: string
+        ativa:
+          type: boolean
+        dataCriacao:
+          format: date-time
+          type: string
+        itens:
+          items:
+            $ref: '#/components/schemas/ItemCestaComCotacao'
+          type: array
+      type: object
+    ItemCestaComCotacao:
+      example:
+        ticker: ticker
+        cotacaoAtual: 1.4658129805029452
+        percentual: 6.027456183070403
+      properties:
+        ticker:
+          type: string
+        percentual:
+          format: double
+          type: number
+        cotacaoAtual:
+          format: double
+          type: number
+      type: object
+    HistoricoCestasResponse:
+      example:
+        cestas:
+        - itens:
+          - ticker: ticker
+            percentual: 60.27456183070403
+          - ticker: ticker
+            percentual: 60.27456183070403
+          cestaId: 0
+          nome: nome
+          dataDesativacao: 2000-01-23T04:56:07.000+00:00
+          ativa: true
+          dataCriacao: 2000-01-23T04:56:07.000+00:00
+        - itens:
+          - ticker: ticker
+            percentual: 60.27456183070403
+          - ticker: ticker
+            percentual: 60.27456183070403
+          cestaId: 0
+          nome: nome
+          dataDesativacao: 2000-01-23T04:56:07.000+00:00
+          ativa: true
+          dataCriacao: 2000-01-23T04:56:07.000+00:00
+      properties:
+        cestas:
+          items:
+            $ref: '#/components/schemas/CestaHistorico'
+          type: array
+      type: object
+    CestaHistorico:
+      example:
+        itens:
+        - ticker: ticker
+          percentual: 60.27456183070403
+        - ticker: ticker
+          percentual: 60.27456183070403
+        cestaId: 0
+        nome: nome
+        dataDesativacao: 2000-01-23T04:56:07.000+00:00
+        ativa: true
+        dataCriacao: 2000-01-23T04:56:07.000+00:00
+      properties:
+        cestaId:
+          format: int64
+          type: integer
+        nome:
+          type: string
+        ativa:
+          type: boolean
+        dataCriacao:
+          format: date-time
+          type: string
+        dataDesativacao:
+          format: date-time
+          nullable: true
+          type: string
+        itens:
+          items:
+            $ref: '#/components/schemas/ItemCesta'
+          type: array
+      type: object
+    CustodiaMasterResponse:
+      example:
+        custodia:
+        - ticker: ticker
+          precoMedio: 1.4658129805029452
+          valorAtual: 5.962133916683182
+          origem: origem
+          quantidade: 6
+        - ticker: ticker
+          precoMedio: 1.4658129805029452
+          valorAtual: 5.962133916683182
+          origem: origem
+          quantidade: 6
+        contaMaster:
+          tipo: MASTER
+          numeroConta: numeroConta
+          id: 0
+        valorTotalResiduo: 5.637376656633329
+      properties:
+        contaMaster:
+          $ref: '#/components/schemas/ContaMasterInfo'
+        custodia:
+          items:
+            $ref: '#/components/schemas/CustodiaMasterItem'
+          type: array
+        valorTotalResiduo:
+          format: double
+          type: number
+      type: object
+    ContaMasterInfo:
+      example:
+        tipo: MASTER
+        numeroConta: numeroConta
+        id: 0
+      properties:
+        id:
+          format: int64
+          type: integer
+        numeroConta:
+          type: string
+        tipo:
+          enum:
+          - MASTER
+          type: string
+      type: object
+    CustodiaMasterItem:
+      example:
+        ticker: ticker
+        precoMedio: 1.4658129805029452
+        valorAtual: 5.962133916683182
+        origem: origem
+        quantidade: 6
+      properties:
+        ticker:
+          type: string
+        quantidade:
+          type: integer
+        precoMedio:
+          format: double
+          type: number
+        valorAtual:
+          format: double
+          type: number
+        origem:
+          type: string
+      type: object
+    ExecutarCompraRequest:
+      example:
+        dataReferencia: 2000-01-23
+      properties:
+        dataReferencia:
+          format: date
+          type: string
+      required:
+      - dataReferencia
+      type: object
+    ExecutarCompraResponse:
+      example:
+        distribuicoes:
+        - clienteId: 7
+          valorAporte: 9.301444243932576
+          nome: nome
+          ativos:
+          - ticker: ticker
+            quantidade: 3
+          - ticker: ticker
+            quantidade: 3
+        - clienteId: 7
+          valorAporte: 9.301444243932576
+          nome: nome
+          ativos:
+          - ticker: ticker
+            quantidade: 3
+          - ticker: ticker
+            quantidade: 3
+        residuosCustMaster:
+        - ticker: ticker
+          quantidade: 2
+        - ticker: ticker
+          quantidade: 2
+        totalClientes: 0
+        dataExecucao: 2000-01-23T04:56:07.000+00:00
+        totalConsolidado: 6.027456183070403
+        ordensCompra:
+        - precoUnitario: 5.637376656633329
+          ticker: ticker
+          valorTotal: 2.3021358869347655
+          quantidadeTotal: 1
+          detalhes:
+          - tipo: FRACIONARIO
+            ticker: ticker
+            quantidade: 5
+          - tipo: FRACIONARIO
+            ticker: ticker
+            quantidade: 5
+        - precoUnitario: 5.637376656633329
+          ticker: ticker
+          valorTotal: 2.3021358869347655
+          quantidadeTotal: 1
+          detalhes:
+          - tipo: FRACIONARIO
+            ticker: ticker
+            quantidade: 5
+          - tipo: FRACIONARIO
+            ticker: ticker
+            quantidade: 5
+        eventosIRPublicados: 4
+        mensagem: mensagem
+      properties:
+        dataExecucao:
+          format: date-time
+          type: string
+        totalClientes:
+          type: integer
+        totalConsolidado:
+          format: double
+          type: number
+        ordensCompra:
+          items:
+            $ref: '#/components/schemas/OrdemCompra'
+          type: array
+        distribuicoes:
+          items:
+            $ref: '#/components/schemas/DistribuicaoCliente'
+          type: array
+        residuosCustMaster:
+          items:
+            $ref: '#/components/schemas/ResiduoMaster'
+          type: array
+        eventosIRPublicados:
+          type: integer
+        mensagem:
+          type: string
+      type: object
+    OrdemCompra:
+      example:
+        precoUnitario: 5.637376656633329
+        ticker: ticker
+        valorTotal: 2.3021358869347655
+        quantidadeTotal: 1
+        detalhes:
+        - tipo: FRACIONARIO
+          ticker: ticker
+          quantidade: 5
+        - tipo: FRACIONARIO
+          ticker: ticker
+          quantidade: 5
+      properties:
+        ticker:
+          type: string
+        quantidadeTotal:
+          type: integer
+        detalhes:
+          items:
+            $ref: '#/components/schemas/DetalheOrdemCompra'
+          type: array
+        precoUnitario:
+          format: double
+          type: number
+        valorTotal:
+          format: double
+          type: number
+      type: object
+    DetalheOrdemCompra:
+      example:
+        tipo: FRACIONARIO
+        ticker: ticker
+        quantidade: 5
+      properties:
+        tipo:
+          enum:
+          - FRACIONARIO
+          - INTEIRO
+          type: string
+        ticker:
+          type: string
+        quantidade:
+          type: integer
+      type: object
+    DistribuicaoCliente:
+      example:
+        clienteId: 7
+        valorAporte: 9.301444243932576
+        nome: nome
+        ativos:
+        - ticker: ticker
+          quantidade: 3
+        - ticker: ticker
+          quantidade: 3
+      properties:
+        clienteId:
+          format: int64
+          type: integer
+        nome:
+          type: string
+        valorAporte:
+          format: double
+          type: number
+        ativos:
+          items:
+            $ref: '#/components/schemas/AtivoDistribuido'
+          type: array
+      type: object
+    AtivoDistribuido:
+      example:
+        ticker: ticker
+        quantidade: 3
+      properties:
+        ticker:
+          type: string
+        quantidade:
+          type: integer
+      type: object
+    ResiduoMaster:
+      example:
+        ticker: ticker
+        quantidade: 2
+      properties:
+        ticker:
+          type: string
+        quantidade:
+          type: integer
+      type: object
+    ErrorResponse:
+      example:
+        codigo: CLIENTE_CPF_DUPLICADO
+        erro: erro
+      properties:
+        erro:
+          type: string
+        codigo:
+          enum:
+          - CLIENTE_CPF_DUPLICADO
+          - VALOR_MENSAL_INVALIDO
+          - PERCENTUAIS_INVALIDOS
+          - QUANTIDADE_ATIVOS_INVALIDA
+          - CLIENTE_JA_INATIVO
+          - CLIENTE_NAO_ENCONTRADO
+          - CESTA_NAO_ENCONTRADA
+          - COTACAO_NAO_ENCONTRADA
+          - COMPRA_JA_EXECUTADA
+          - KAFKA_INDISPONIVEL
+          type: string
+      type: object
+    cadastrarCesta_201_response:
+      oneOf:
+      - $ref: '#/components/schemas/CestaResponseSimples'
+      - $ref: '#/components/schemas/CestaResponseComRebalanceamento'
+
